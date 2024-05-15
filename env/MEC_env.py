@@ -145,17 +145,17 @@ class MEC_Env():
             
             if actions == ACTION_TO_CLOUD:
                 the_task['to'] = 0
-                the_task['off_energy'] = (the_task['size']/self.cloud_off_datarate[the_task['user_id']])*self.cloud_off_power
-                the_task['exe_energy'] = the_task['size']*self.cloud_k*self.cloud_C*(self.cloud_cpu_freq**2)
-                self.step_energy = the_task['off_energy'] + the_task['exe_energy']
-                self.cloud_off_list.append(the_task)
+                the_task['off_energy'] = (the_task['size']/self.cloud_off_datarate[the_task['user_id']])*self.cloud_off_power  
+                the_task['exe_energy'] = the_task['size']*self.cloud_k*self.cloud_C*(self.cloud_cpu_freq**2)    # 由于相关参数不变，能量消耗实际上是准确值
+                self.step_energy = the_task['off_energy'] + the_task['exe_energy']  
+                self.cloud_off_list.append(the_task)    # 当前任务加入到指定服务器的卸载列表中
             else:
                 e = actions
                 the_task['to'] = e
                 the_task['off_energy'] = (the_task['size']/self.edge_off_datarate[e-1, the_task['user_id']])*self.edge_off_power
                 the_task['exe_energy'] = the_task['size']*self.edge_k*self.edge_C*(self.edge_cpu_freq[e-1]**2)
                 self.step_energy = the_task['off_energy'] + the_task['exe_energy']
-                self.edge_off_lists[e-1].append(the_task)
+                self.edge_off_lists[e-1].append(the_task)   # 当前任务加入到指定服务器的卸载列表中
         self.rew_t, self.rew_e = self.estimate_rew()
                 
         #####################################################
@@ -187,7 +187,7 @@ class MEC_Env():
             else:
                 min_time = self.dt
    
-            run_time = min(self.dt-used_time, min_time)
+            run_time = min(self.dt-used_time, min_time)     # 在未来run_time时间内，云服务器中正在执行任务的数目不变；取第一项时，下次即跳出循环
 
             #推进卸载
             cloud_pre_exe_list = []
@@ -195,14 +195,14 @@ class MEC_Env():
             for i in range(task_off_num):
                 the_user = self.cloud_off_list[i]['user_id']
                 self.cloud_off_list[i]['remain'] -= self.cloud_off_datarate[the_user]*run_time
-                self.cloud_off_list[i]['off_energy'] += run_time*self.cloud_off_power
+                self.cloud_off_list[i]['off_energy'] += run_time*self.cloud_off_power   # ！不需要吧！
                 # self.step_energy += run_time*self.cloud_off_power
                 self.cloud_off_list[i]['off_time'] += run_time
-                if self.cloud_off_list[i]['remain'] <= ZERO_RES:
+                if self.cloud_off_list[i]['remain'] <= ZERO_RES:    # 任务完成卸载
                     retain_flag_off[i] = False
                     the_task = deepcopy(self.cloud_off_list[i])
                     the_task['remain'] = self.cloud_off_list[i]['size']
-                    cloud_pre_exe_list.append(the_task)
+                    cloud_pre_exe_list.append(the_task) # 任务加入到预执行列表
             pt = 0
             for i in range(task_off_num):
                 if retain_flag_off[i]==False:
@@ -216,7 +216,7 @@ class MEC_Env():
             retain_flag_exe = np.ones(task_exe_num, dtype=np.bool)
             for i in range(task_exe_num):
                 self.cloud_exe_list[i]['remain'] -= cloud_exe_size
-                self.cloud_exe_list[i]['exe_energy'] += cloud_exe_energy
+                self.cloud_exe_list[i]['exe_energy'] += cloud_exe_energy    # ！不需要吧！
                 self.cloud_exe_list[i]['exe_time'] += run_time
                 if self.cloud_exe_list[i]['remain'] <= ZERO_RES:
                     retain_flag_exe[i] = False
