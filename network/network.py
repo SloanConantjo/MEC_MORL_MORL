@@ -12,6 +12,7 @@ import torch.nn.functional as F
 
 class mlp_resblock(nn.Module):
     def __init__(self, in_ch, ch, out_ch=None, block_num=3, is_in=False):
+        '''只有is_in为True时，in_ch才有用；否则输入的维度一定等于ch'''
         super().__init__()
         self.models=nn.Sequential()
         self.relus=nn.Sequential()
@@ -19,7 +20,7 @@ class mlp_resblock(nn.Module):
         self.is_in = is_in
         self.is_out = out_ch
         
-        if self.is_in:
+        if self.is_in:  # 添加输入层
             self.in_mlp = nn.Sequential(*[
                 nn.Linear(in_ch, ch), 
                 nn.LeakyReLU(0.1, inplace=True)])
@@ -30,7 +31,7 @@ class mlp_resblock(nn.Module):
                 nn.Linear(ch, ch)]))
             self.relus.add_module(str(i), nn.Sequential(*[
                 nn.LeakyReLU(0.1, inplace=True)]))
-        if self.is_out:
+        if self.is_out:  # 添加输出层
             self.out_mlp = nn.Sequential(*[
             nn.Linear(ch, ch), 
             nn.LeakyReLU(0.1, inplace=True),
