@@ -15,6 +15,7 @@ import time
 import json
 import math
 from tqdm import tqdm
+
 from env import MEC_Env
 from network import conv_mlp_net
 
@@ -43,6 +44,7 @@ dual_clip, norm_adv = None, 0.0
 recompute_adv = 0
 
 
+
 INPUT_CH = 67
 FEATURE_CH = 512
 MLP_CH = 1024
@@ -69,7 +71,7 @@ class mec_net(nn.Module):
         # print('save model!')
 
     def forward(self, obs, state=None, info={}):
-        state = obs#['servers']
+        state = obs # ['servers']
         state = torch.tensor(state).float()
         if self.is_gpu:
             state = state.cuda()
@@ -77,8 +79,6 @@ class mec_net(nn.Module):
         logits = self.network(state)
         
         return logits, state
-
-
 
 
 
@@ -108,8 +108,6 @@ class Actor(nn.Module):
 
 
 
-
-
 class Critic(nn.Module):
     def __init__(self, is_gpu=True):
         super().__init__()
@@ -136,6 +134,7 @@ class Critic(nn.Module):
 
 
 
+# 初始化actor 和 critic 网络
 actor = Actor(is_gpu = is_gpu)
 critic = Critic(is_gpu = is_gpu)
 
@@ -144,27 +143,29 @@ load_path = None
 if is_gpu:
     actor.cuda()
     critic.cuda()
-
     
 from tianshou.utils.net.common import ActorCritic
 actor_critic = ActorCritic(actor, critic)
 
+# 创建优化器 optim
 optim = torch.optim.Adam(actor_critic.parameters(), lr=lr)
 
 
 
 
-dist = torch.distributions.Categorical
+dist = torch.distributions.Categorical  # 离散概率分布类
 
-action_space = gym.spaces.Discrete(edge_num)
+action_space = gym.spaces.Discrete(edge_num)    # 定义离散行为空间
 
-if lr_decay:
+# 是否设置学习率调度器
+if lr_decay:    # lr_decay--学习率衰减
     lr_scheduler = LambdaLR(
         optim, lr_lambda=lambda epoch: lr_decay**(epoch-1)
     )
 else:
     lr_scheduler = None
 
+# PPO策略初始化
 policy = ts.policy.PPOPolicy(actor, critic, optim, dist,
         discount_factor=gamma, max_grad_norm=max_grad_norm,
         eps_clip=eps_clip, vf_coef=vf_coef,
@@ -177,25 +178,28 @@ policy = ts.policy.PPOPolicy(actor, critic, optim, dist,
 
 
 
+# 创建保存模型的目录
 for i in range(101):
     try:
-        os.mkdir('save/pth-e%d/'%(edge_num) + expn + '/w%03d'%(i))
+        os.makedirs('save/py/'%(edge_num) + expn + '/w%03d'%(i))  # ！mkdir无法创建多级目录！
     except:
         pass
 
+# 
 for wi in range(100,0-1,-2):
-    
     if wi==100:
         epoch_a = epoch * 10
     else:
         epoch_a = epoch
-
+    # 创建训练环境（序列）和测试环境（序列）；序列内并行处理
     train_envs = DummyVectorEnv([lambda: MEC_Env(conf_name=config,w=wi/100.0,fc=4e9,fe=2e9,edge_num=edge_num) for _ in range(train_num)])
     test_envs = DummyVectorEnv([lambda: MEC_Env(conf_name=config,w=wi/100.0,fc=4e9,fe=2e9,edge_num=edge_num) for _ in range(test_num)]) 
-
+    # 创建经验回放缓冲区buffer
     buffer = ts.data.VectorReplayBuffer(buffer_size, train_num)
-    train_collector = ts.data.Collector(policy, train_envs, buffer)
+    # 初始化两个数据收集器
+    train_collector = ts.data.Collector(policy, train_envs, buffer) # 收集训练数据存于buffer中
     test_collector = ts.data.Collector(policy, test_envs)
+    # 收集数据
     train_collector.collect(n_episode=train_num)
 
     def save_best_fn (policy):
