@@ -165,7 +165,7 @@ if lr_decay:    # lr_decay--学习率衰减
 else:
     lr_scheduler = None
 
-# PPO策略初始化
+# 策略初始化
 policy = ts.policy.PPOPolicy(actor, critic, optim, dist,
         discount_factor=gamma, max_grad_norm=max_grad_norm,
         eps_clip=eps_clip, vf_coef=vf_coef,
@@ -181,11 +181,11 @@ policy = ts.policy.PPOPolicy(actor, critic, optim, dist,
 # 创建保存模型的目录
 for i in range(101):
     try:
-        os.makedirs('save/py/'%(edge_num) + expn + '/w%03d'%(i))  # ！mkdir无法创建多级目录！
+        os.makedirs('save/pth-e%d/'%(edge_num) + expn + '/w%03d'%(i))  # ！mkdir无法创建多级目录！
     except:
         pass
 
-# 
+# 针对不同偏好，
 for wi in range(100,0-1,-2):
     if wi==100:
         epoch_a = epoch * 10
@@ -200,7 +200,7 @@ for wi in range(100,0-1,-2):
     train_collector = ts.data.Collector(policy, train_envs, buffer) # 收集训练数据存于buffer中
     test_collector = ts.data.Collector(policy, test_envs)
     # 收集数据
-    train_collector.collect(n_episode=train_num)
+    train_collector.collect(n_episode=train_num)    # 需要吗？
 
     def save_best_fn (policy):
         pass
@@ -216,8 +216,19 @@ for wi in range(100,0-1,-2):
         return rews
 
     result = ts.trainer.onpolicy_trainer(
-            policy, train_collector, test_collector, epoch_a, step_per_epoch,
-            repeat_per_collect, test_num, batch_size,
-            episode_per_collect=episode_per_collect, save_best_fn =save_best_fn , logger=logger,
-            test_fn = test_fn, test_in_train=False)
+            policy, 
+            train_collector, 
+            test_collector, 
+            
+            epoch_a, 
+            step_per_epoch,
+            repeat_per_collect, 
+            test_num, 
+            batch_size,
+            episode_per_collect=episode_per_collect, 
+            
+            save_best_fn =save_best_fn , 
+            logger=logger,
+            test_fn = test_fn, 
+            test_in_train=False)
 
